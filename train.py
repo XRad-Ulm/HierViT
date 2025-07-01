@@ -124,45 +124,30 @@ def train_model(trainmodel, data_loader, args, epoch, optim, idx_with_attri):
                 if not args.base_model=="ViT":
                     pred_mal = torch.unsqueeze(pred_mal, 0)
 
-            if args.ordinal_target:
-                pred_mal[pred_mal < 0.5] = 0
-                pred_mal[pred_mal > 0] = 1
-                mal_gt_scores = []
-                mal_pred_scores = []
-                for sai in range(y_mal.shape[0]):
-                    mal_gt_scores.append(torch.sum(y_mal[sai]).item())
-                    if 0 in pred_mal[sai]:
-                        mal_pred_scores.append([idx for idx, val in enumerate(pred_mal[sai]) if val < 1.0][0])
-                    else:
-                        mal_pred_scores.append(torch.sum(pred_mal[sai]).item())
-                mal_confusion_matrix = confusion_matrix(mal_gt_scores,
-                                                        mal_pred_scores,
+            if args.base_model=="ViT":
+                if args.dataset == "derm7pt":
+                    mal_confusion_matrix = confusion_matrix(y_mal.cpu().detach().numpy(),
+                                                            torch.argmax(pred_mal,dim=-1).cpu().detach().numpy(),
+                                                            labels=[0,1,2,3,4])
+
+                elif args.dataset == "LIDC":
+                    pred_mal *= 4
+                    pred_mal = torch.round(pred_mal)
+                    mal_confusion_matrix = confusion_matrix(np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1,
+                                                            pred_mal.cpu().detach().numpy() + 1,
+                                                            labels=[1, 2, 3, 4, 5])
+                from torchmetrics import Dice
+                dice = Dice(average='micro').to("cuda")
+                if args.dataset in ["LIDC"]:
+                    wandb.log({'train_dice_step': dice(pred_recon, y_mask.type(torch.int64))})
+            elif args.dataset == "derm7pt":
+                mal_confusion_matrix = confusion_matrix(y_mal.cpu().detach().numpy(),
+                                                        torch.argmax(pred_mal, dim=-1).cpu().detach().numpy(),
                                                         labels=[0, 1, 2, 3, 4])
             else:
-                if args.base_model=="ViT":
-                    if args.dataset == "derm7pt":
-                        mal_confusion_matrix = confusion_matrix(y_mal.cpu().detach().numpy(),
-                                                                torch.argmax(pred_mal,dim=-1).cpu().detach().numpy(),
-                                                                labels=[0,1,2,3,4])
-
-                    elif args.dataset == "LIDC":
-                        pred_mal *= 4
-                        pred_mal = torch.round(pred_mal)
-                        mal_confusion_matrix = confusion_matrix(np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1,
-                                                                pred_mal.cpu().detach().numpy() + 1,
-                                                                labels=[1, 2, 3, 4, 5])
-                    from torchmetrics import Dice
-                    dice = Dice(average='micro').to("cuda")
-                    if args.dataset in ["LIDC"]:
-                        wandb.log({'train_dice_step': dice(pred_recon, y_mask.type(torch.int64))})
-                elif args.dataset == "derm7pt":
-                    mal_confusion_matrix = confusion_matrix(y_mal.cpu().detach().numpy(),
-                                                            torch.argmax(pred_mal, dim=-1).cpu().detach().numpy(),
-                                                            labels=[0, 1, 2, 3, 4])
-                else:
-                    mal_confusion_matrix = confusion_matrix(np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1,
-                                                            np.argmax(pred_mal.cpu().detach().numpy(), axis=1) + 1,
-                                                            labels=[1, 2, 3, 4, 5])
+                mal_confusion_matrix = confusion_matrix(np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1,
+                                                        np.argmax(pred_mal.cpu().detach().numpy(), axis=1) + 1,
+                                                        labels=[1, 2, 3, 4, 5])
             if args.dataset == "derm7pt":
                 mal_correct_within_one = sum(np.diagonal(mal_confusion_matrix, offset=0))
             else:
