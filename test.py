@@ -48,16 +48,11 @@ def test(testmodel, data_loader, args):
             print(str(i) + " / " + str(len(data_loader)))
             if args.dataset == "LIDC":
                 (x, y_mask, y_attributes, y_mal, sampleID, _) = data
-                if args.attr_class:
-                    x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda",
-                                                                                                dtype=torch.float), \
-                        y_attributes.to("cuda", dtype=torch.int64), y_mal.to("cuda",
-                                                                             dtype=torch.float)
-                else:
-                    x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda",
-                                                                                                dtype=torch.float), \
-                        y_attributes.to("cuda", dtype=torch.float), y_mal.to("cuda",
-                                                                             dtype=torch.float)
+                
+                x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda",
+                                                                                            dtype=torch.float), \
+                    y_attributes.to("cuda", dtype=torch.float), y_mal.to("cuda",
+                                                                         dtype=torch.float)
             elif args.dataset == "derm7pt":
                 (x, y_mask, y_attributes, y_mal, sampleID) = data
                 x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
@@ -553,14 +548,9 @@ def test_indepth_attripredCorr(testmodel, train_loader, test_loader, epoch,
     with torch.no_grad():
         for x, y_mask, y_attributes, y_mal, _ in test_loader:
             batch_num += 1
-            if args.attr_class:
-                x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
-                    y_attributes.to("cuda", dtype=torch.int64), y_mal.to("cuda",
-                                                                         dtype=torch.float)
-            else:
-                x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
-                    y_attributes.to("cuda", dtype=torch.float), y_mal.to("cuda",
-                                                                         dtype=torch.float)
+            x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
+                y_attributes.to("cuda", dtype=torch.float), y_mal.to("cuda",
+                                                                     dtype=torch.float)
 
             _, _, pred_mask, dists_to_protos = testmodel(x)
 
@@ -607,46 +597,25 @@ def test_indepth_attripredCorr(testmodel, train_loader, test_loader, epoch,
                             attrLabelsSamples_protos[sai, capsule_idx] = proto_attrsc[capsule_idx]
 
             pred_p, _, _ = testmodel.forwardCapsule(x_ex=x_ex.to("cuda", dtype=torch.float))
-            if args.ordinal_target:
-                pred_p[pred_p < 0.5] = 0
-                pred_p[pred_p > 0] = 1
-                pred_proto = []
-                for sai in range(pred_p.shape[0]):
-                    if 0 in pred_p[sai]:
-                        pred_proto.append([idx for idx, val in enumerate(pred_p[sai]) if val < 1.0][0])
-                    else:
-                        pred_proto.append(torch.sum(pred_p[sai]).item())
-                pred_p_correct_0 = torch.eq(torch.sum(y_mal, dim=-1).cpu(), torch.tensor(pred_proto))
-                pred_p_correct_p1 = torch.eq(torch.sum(y_mal, dim=-1).cpu() + 1, torch.tensor(pred_proto))
-                pred_p_correct_m1 = torch.eq(torch.sum(y_mal, dim=-1).cpu() - 1, torch.tensor(pred_proto))
-            else:
-                pred_p_correct_0 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) == np.argmax(
-                    pred_p.cpu().detach().numpy(), axis=1)
-                pred_p_correct_p1 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1 == np.argmax(
-                    pred_p.cpu().detach().numpy(), axis=1)
-                pred_p_correct_m1 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) - 1 == np.argmax(
-                    pred_p.cpu().detach().numpy(), axis=1)
+            pred_p_correct_0 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) == np.argmax(
+                pred_p.cpu().detach().numpy(), axis=1)
+            pred_p_correct_p1 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1 == np.argmax(
+                pred_p.cpu().detach().numpy(), axis=1)
+            pred_p_correct_m1 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) - 1 == np.argmax(
+                pred_p.cpu().detach().numpy(), axis=1)
             pred_p_correct_list = pred_p_correct_0 + pred_p_correct_p1 + pred_p_correct_m1
-            if args.ordinal_target:
-                predcorr_test[
-                (batch_num * batch_size):(batch_num * batch_size + len(pred_p_correct_list))] = pred_p_correct_list
-            else:
-                predcorr_test[
-                (batch_num * batch_size):(batch_num * batch_size + len(pred_p_correct_list))] = torch.from_numpy(
-                    pred_p_correct_list)
+            predcorr_test[
+            (batch_num * batch_size):(batch_num * batch_size + len(pred_p_correct_list))] = torch.from_numpy(
+                pred_p_correct_list)
 
-            if args.attr_class:
-                y_attributes += 1
-                attrLabelsSamples_protos += 1
-            else:
-                y_attributes[:, [0, 3, 4, 5, 6, 7]] *= 4
-                y_attributes[:, 1] *= 3
-                y_attributes[:, 2] *= 5
-                y_attributes += 1
-                attrLabelsSamples_protos[:, [0, 3, 4, 5, 6, 7]] *= 4
-                attrLabelsSamples_protos[:, 1] *= 3
-                attrLabelsSamples_protos[:, 2] *= 5
-                attrLabelsSamples_protos += 1
+            y_attributes[:, [0, 3, 4, 5, 6, 7]] *= 4
+            y_attributes[:, 1] *= 3
+            y_attributes[:, 2] *= 5
+            y_attributes += 1
+            attrLabelsSamples_protos[:, [0, 3, 4, 5, 6, 7]] *= 4
+            attrLabelsSamples_protos[:, 1] *= 3
+            attrLabelsSamples_protos[:, 2] *= 5
+            attrLabelsSamples_protos += 1
             all_attri_correct = []
             for at in range(y_attributes.shape[1]):
                 attri_p_correct_0 = np.rint(y_attributes[:, at].cpu().detach().numpy()) == np.rint(
@@ -691,14 +660,9 @@ def test_indepth_attripredCorr(testmodel, train_loader, test_loader, epoch,
         for x, y_mask, y_attributes, y_mal, _ in train_loader:
             print(batch_num)
             batch_num += 1
-            if args.attr_class:
-                x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
-                    y_attributes.to("cuda", dtype=torch.int64), y_mal.to("cuda",
-                                                                         dtype=torch.float)
-            else:
-                x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
-                    y_attributes.to("cuda", dtype=torch.float), y_mal.to("cuda",
-                                                                         dtype=torch.float)
+            x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
+                y_attributes.to("cuda", dtype=torch.float), y_mal.to("cuda",
+                                                                     dtype=torch.float)
 
             _, _, pred_mask, dists_to_protos = testmodel(x)
 
@@ -740,47 +704,25 @@ def test_indepth_attripredCorr(testmodel, train_loader, test_loader, epoch,
                             attrLabelsSamples_protos[sai, capsule_idx] = proto_attrsc[capsule_idx]
 
             pred_p, _, _ = testmodel.forwardCapsule(x_ex=x_ex.to("cuda", dtype=torch.float))
-            if args.ordinal_target:
-                pred_p[pred_p < 0.5] = 0
-                pred_p[pred_p > 0] = 1
-                pred_proto = []
-                for sai in range(pred_p.shape[0]):
-                    if 0 in pred_p[sai]:
-                        pred_proto.append([idx for idx, val in enumerate(pred_p[sai]) if val < 1.0][0])
-                    else:
-                        pred_proto.append(torch.sum(pred_p[sai]).item())
-
-                pred_p_correct_0 = torch.eq(torch.sum(y_mal, dim=-1).cpu(), torch.tensor(pred_proto))
-                pred_p_correct_p1 = torch.eq(torch.sum(y_mal, dim=-1).cpu() + 1, torch.tensor(pred_proto))
-                pred_p_correct_m1 = torch.eq(torch.sum(y_mal, dim=-1).cpu() - 1, torch.tensor(pred_proto))
-            else:
-                pred_p_correct_0 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) == np.argmax(
-                    pred_p.cpu().detach().numpy(), axis=1)
-                pred_p_correct_p1 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1 == np.argmax(
-                    pred_p.cpu().detach().numpy(), axis=1)
-                pred_p_correct_m1 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) - 1 == np.argmax(
-                    pred_p.cpu().detach().numpy(), axis=1)
+            pred_p_correct_0 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) == np.argmax(
+                pred_p.cpu().detach().numpy(), axis=1)
+            pred_p_correct_p1 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1 == np.argmax(
+                pred_p.cpu().detach().numpy(), axis=1)
+            pred_p_correct_m1 = np.argmax(y_mal.cpu().detach().numpy(), axis=1) - 1 == np.argmax(
+                pred_p.cpu().detach().numpy(), axis=1)
             pred_p_correct_list = pred_p_correct_0 + pred_p_correct_p1 + pred_p_correct_m1
-            if args.ordinal_target:
-                predcorr_train[
-                (batch_num * batch_size):(batch_num * batch_size + len(pred_p_correct_list))] = pred_p_correct_list
-            else:
-                predcorr_train[
-                (batch_num * batch_size):(batch_num * batch_size + len(pred_p_correct_list))] = torch.from_numpy(
-                    pred_p_correct_list)
+            predcorr_train[
+            (batch_num * batch_size):(batch_num * batch_size + len(pred_p_correct_list))] = torch.from_numpy(
+                pred_p_correct_list)
 
-            if args.attr_class:
-                y_attributes += 1
-                attrLabelsSamples_protos += 1
-            else:
-                y_attributes[:, [0, 3, 4, 5, 6, 7]] *= 4
-                y_attributes[:, 1] *= 3
-                y_attributes[:, 2] *= 5
-                y_attributes += 1
-                attrLabelsSamples_protos[:, [0, 3, 4, 5, 6, 7]] *= 4
-                attrLabelsSamples_protos[:, 1] *= 3
-                attrLabelsSamples_protos[:, 2] *= 5
-                attrLabelsSamples_protos += 1
+            y_attributes[:, [0, 3, 4, 5, 6, 7]] *= 4
+            y_attributes[:, 1] *= 3
+            y_attributes[:, 2] *= 5
+            y_attributes += 1
+            attrLabelsSamples_protos[:, [0, 3, 4, 5, 6, 7]] *= 4
+            attrLabelsSamples_protos[:, 1] *= 3
+            attrLabelsSamples_protos[:, 2] *= 5
+            attrLabelsSamples_protos += 1
             all_attri_correct = []
             for at in range(y_attributes.shape[1]):
                 attri_p_correct_0 = np.rint(y_attributes[:, at].cpu().detach().numpy()) == np.rint(
@@ -954,16 +896,10 @@ def test_indepth(testmodel, data_loader, epoch,
             print(str(i) + " / " + str(len(data_loader)))
             if args.dataset == "LIDC":
                 (x, y_mask, y_attributes, y_mal, _, _) = data
-                if args.attr_class:
-                    x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda",
-                                                                                                dtype=torch.float), \
-                        y_attributes.to("cuda", dtype=torch.int64), y_mal.to("cuda",
-                                                                             dtype=torch.float)
-                else:
-                    x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda",
-                                                                                                dtype=torch.float), \
-                        y_attributes.to("cuda", dtype=torch.float), y_mal.to("cuda",
-                                                                             dtype=torch.float)
+                x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda",
+                                                                                            dtype=torch.float), \
+                    y_attributes.to("cuda", dtype=torch.float), y_mal.to("cuda",
+                                                                         dtype=torch.float)
             elif args.dataset == "derm7pt":
                 (x, y_mask, y_attributes, y_mal, sampleID) = data
                 x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
@@ -1083,40 +1019,28 @@ def test_indepth(testmodel, data_loader, epoch,
                 pred_p, _, _ = testmodel.forwardCapsule(x_ex=x_ex.to("cuda", dtype=torch.float))
 
             if args.dataset in ["LIDC","derm7pt"]:
-                if args.ordinal_target:
-                    pred_p[pred_p < 0.5] = 0
-                    pred_p[pred_p > 0] = 1
-                    pred_proto = []
-                    for sai in range(pred_p.shape[0]):
-                        if 0 in pred_p[sai]:
-                            pred_proto.append([idx for idx, val in enumerate(pred_p[sai]) if val < 1.0][0])
-                        else:
-                            pred_proto.append(torch.sum(pred_p[sai]).item())
-                    mal_confusion_matrix = confusion_matrix(torch.sum(y_mal, dim=-1).cpu().detach().numpy(),
-                                                            pred_proto,
+                
+                if args.base_model == "ViT":
+                    if args.dataset == "derm7pt":
+                        mal_confusion_matrix = confusion_matrix(y_mal.cpu().detach().numpy(),
+                                                                torch.argmax(pred_p,
+                                                                             dim=-1).cpu().detach().numpy(),
+                                                                labels=[0, 1, 2, 3, 4])
+                    elif args.dataset == "LIDC":
+                        pred_p *= 4
+                        pred_p = torch.round(pred_p)
+                        mal_confusion_matrix = confusion_matrix(np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1,
+                                                                pred_p.cpu().detach().numpy() + 1,
+                                                                labels=[1, 2, 3, 4, 5])
+
+                elif args.dataset == "derm7pt":
+                    mal_confusion_matrix = confusion_matrix(y_mal.cpu().detach().numpy(),
+                                                            torch.argmax(pred_p, dim=-1).cpu().detach().numpy(),
                                                             labels=[0, 1, 2, 3, 4])
                 else:
-                    if args.base_model == "ViT":
-                        if args.dataset == "derm7pt":
-                            mal_confusion_matrix = confusion_matrix(y_mal.cpu().detach().numpy(),
-                                                                    torch.argmax(pred_p,
-                                                                                 dim=-1).cpu().detach().numpy(),
-                                                                    labels=[0, 1, 2, 3, 4])
-                        elif args.dataset == "LIDC":
-                            pred_p *= 4
-                            pred_p = torch.round(pred_p)
-                            mal_confusion_matrix = confusion_matrix(np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1,
-                                                                    pred_p.cpu().detach().numpy() + 1,
-                                                                    labels=[1, 2, 3, 4, 5])
-
-                    elif args.dataset == "derm7pt":
-                        mal_confusion_matrix = confusion_matrix(y_mal.cpu().detach().numpy(),
-                                                                torch.argmax(pred_p, dim=-1).cpu().detach().numpy(),
-                                                                labels=[0, 1, 2, 3, 4])
-                    else:
-                        mal_confusion_matrix = confusion_matrix(np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1,
-                                                                np.argmax(pred_p.cpu().detach().numpy(), axis=1) + 1,
-                                                                labels=[1, 2, 3, 4, 5])
+                    mal_confusion_matrix = confusion_matrix(np.argmax(y_mal.cpu().detach().numpy(), axis=1) + 1,
+                                                            np.argmax(pred_p.cpu().detach().numpy(), axis=1) + 1,
+                                                            labels=[1, 2, 3, 4, 5])
 
                 if args.dataset == "derm7pt":
                     mal_correct_within_one = sum(np.diagonal(mal_confusion_matrix, offset=0))
@@ -1128,9 +1052,32 @@ def test_indepth(testmodel, data_loader, epoch,
                                              sum(np.diagonal(mal_confusion_matrix, offset=-1))
                 correct_mal += mal_correct_within_one
 
-                if args.attr_class:
+                
+                if args.dataset == "derm7pt":
+                    print(y_attributes.shape)
+                    print(attrLabelsSamples_protos_max.shape)
+                    for attri_i in range(7):
+                        correct_attproto[attri_i] += torch.sum(y_attributes[:,attri_i] == attrLabelsSamples_protos[:,attri_i]).cpu().detach().numpy()
+                        distance_attr_gt[attri_i] += y_attributes.shape[0] - torch.sum(y_attributes[:,attri_i] == attrLabelsSamples_protos_max[:,attri_i]).cpu().detach().numpy()
+                        howoftenareattrpredandattrprotosame[attri_i] += torch.sum(attrLabelsSamples_protos[:,attri_i] == torch.argmax(pred_attr[attri_i],dim=-1)).cpu().detach().numpy()
+
+                elif args.dataset == "LIDC":
+                    y_attributes[:, [0, 3, 4, 5, 6, 7]] *= 4
+                    y_attributes[:, 1] *= 3
+                    y_attributes[:, 2] *= 5
                     y_attributes += 1
+                    pred_attr[:, [0, 3, 4, 5, 6, 7]] *= 4
+                    pred_attr[:, 1] *= 3
+                    pred_attr[:, 2] *= 5
+                    pred_attr += 1
+                    attrLabelsSamples_protos[:, [0, 3, 4, 5, 6, 7]] *= 4
+                    attrLabelsSamples_protos[:, 1] *= 3
+                    attrLabelsSamples_protos[:, 2] *= 5
                     attrLabelsSamples_protos += 1
+                    attrLabelsSamples_protos_max[:, [0, 3, 4, 5, 6, 7]] *= 4
+                    attrLabelsSamples_protos_max[:, 1] *= 3
+                    attrLabelsSamples_protos_max[:, 2] *= 5
+                    attrLabelsSamples_protos_max += 1
                     for at in range(y_attributes.shape[1]):
                         a_labels = [1, 2, 3, 4, 5]
                         if num_attributes == 8:
@@ -1145,64 +1092,24 @@ def test_indepth(testmodel, data_loader, epoch,
                         correct_attproto[at] += sum(np.diagonal(attr_confusion_matrix_proto, offset=0)) + \
                                                 sum(np.diagonal(attr_confusion_matrix_proto, offset=1)) + \
                                                 sum(np.diagonal(attr_confusion_matrix_proto, offset=-1))
-                else:
-                    if args.dataset == "derm7pt":
-                        print(y_attributes.shape)
-                        print(attrLabelsSamples_protos_max.shape)
-                        for attri_i in range(7):
-                            correct_attproto[attri_i] += torch.sum(y_attributes[:,attri_i] == attrLabelsSamples_protos[:,attri_i]).cpu().detach().numpy()
-                            distance_attr_gt[attri_i] += y_attributes.shape[0] - torch.sum(y_attributes[:,attri_i] == attrLabelsSamples_protos_max[:,attri_i]).cpu().detach().numpy()
-                            howoftenareattrpredandattrprotosame[attri_i] += torch.sum(attrLabelsSamples_protos[:,attri_i] == torch.argmax(pred_attr[attri_i],dim=-1)).cpu().detach().numpy()
-
-                    elif args.dataset == "LIDC":
-                        y_attributes[:, [0, 3, 4, 5, 6, 7]] *= 4
-                        y_attributes[:, 1] *= 3
-                        y_attributes[:, 2] *= 5
-                        y_attributes += 1
-                        pred_attr[:, [0, 3, 4, 5, 6, 7]] *= 4
-                        pred_attr[:, 1] *= 3
-                        pred_attr[:, 2] *= 5
-                        pred_attr += 1
-                        attrLabelsSamples_protos[:, [0, 3, 4, 5, 6, 7]] *= 4
-                        attrLabelsSamples_protos[:, 1] *= 3
-                        attrLabelsSamples_protos[:, 2] *= 5
-                        attrLabelsSamples_protos += 1
-                        attrLabelsSamples_protos_max[:, [0, 3, 4, 5, 6, 7]] *= 4
-                        attrLabelsSamples_protos_max[:, 1] *= 3
-                        attrLabelsSamples_protos_max[:, 2] *= 5
-                        attrLabelsSamples_protos_max += 1
-                        for at in range(y_attributes.shape[1]):
-                            a_labels = [1, 2, 3, 4, 5]
-                            if num_attributes == 8:
-                                if at == 1:
-                                    a_labels = [1, 2, 3, 4]
-                                if at == 2:
-                                    a_labels = [1, 2, 3, 4, 5, 6]
-                            attr_confusion_matrix_proto = confusion_matrix(
-                                np.rint(y_attributes[:, at].cpu().detach().numpy()),
-                                np.rint(attrLabelsSamples_protos[:, at].cpu().detach().numpy()),
-                                labels=a_labels)
-                            correct_attproto[at] += sum(np.diagonal(attr_confusion_matrix_proto, offset=0)) + \
-                                                    sum(np.diagonal(attr_confusion_matrix_proto, offset=1)) + \
-                                                    sum(np.diagonal(attr_confusion_matrix_proto, offset=-1))
-                            howoftenareattrpredandattrprotosame[at] += np.sum(np.absolute((np.rint(attrLabelsSamples_protos[:, at].cpu().detach().numpy())
-                                                                                            -np.rint(pred_attr[:,at].cpu().detach().numpy())))<2)
-                            attr_confusion_matrix_proto_max_gt = confusion_matrix(
-                                np.rint(y_attributes[:, at].cpu().detach().numpy()),
-                                np.rint(attrLabelsSamples_protos_max[:, at].cpu().detach().numpy()),
-                                labels=a_labels)
-                            distance_attr_gt[at] += attr_confusion_matrix_proto_max_gt.sum() - \
-                                                 (sum(np.diagonal(attr_confusion_matrix_proto_max_gt, offset=0)) + \
-                                                 sum(np.diagonal(attr_confusion_matrix_proto_max_gt, offset=1)) + \
-                                                 sum(np.diagonal(attr_confusion_matrix_proto_max_gt, offset=-1)))
-                            attr_confusion_matrix_proto_max_pred = confusion_matrix(
-                                np.rint(attrLabelsSamples_protos[:, at].cpu().detach().numpy()),
-                                np.rint(attrLabelsSamples_protos_max[:, at].cpu().detach().numpy()),
-                                labels=a_labels)
-                            distance_attr_pred[at] += attr_confusion_matrix_proto_max_pred.sum() - \
-                                                 (sum(np.diagonal(attr_confusion_matrix_proto_max_pred, offset=0)) + \
-                                                 sum(np.diagonal(attr_confusion_matrix_proto_max_pred, offset=1)) + \
-                                                 sum(np.diagonal(attr_confusion_matrix_proto_max_pred, offset=-1)))
+                        howoftenareattrpredandattrprotosame[at] += np.sum(np.absolute((np.rint(attrLabelsSamples_protos[:, at].cpu().detach().numpy())
+                                                                                        -np.rint(pred_attr[:,at].cpu().detach().numpy())))<2)
+                        attr_confusion_matrix_proto_max_gt = confusion_matrix(
+                            np.rint(y_attributes[:, at].cpu().detach().numpy()),
+                            np.rint(attrLabelsSamples_protos_max[:, at].cpu().detach().numpy()),
+                            labels=a_labels)
+                        distance_attr_gt[at] += attr_confusion_matrix_proto_max_gt.sum() - \
+                                             (sum(np.diagonal(attr_confusion_matrix_proto_max_gt, offset=0)) + \
+                                             sum(np.diagonal(attr_confusion_matrix_proto_max_gt, offset=1)) + \
+                                             sum(np.diagonal(attr_confusion_matrix_proto_max_gt, offset=-1)))
+                        attr_confusion_matrix_proto_max_pred = confusion_matrix(
+                            np.rint(attrLabelsSamples_protos[:, at].cpu().detach().numpy()),
+                            np.rint(attrLabelsSamples_protos_max[:, at].cpu().detach().numpy()),
+                            labels=a_labels)
+                        distance_attr_pred[at] += attr_confusion_matrix_proto_max_pred.sum() - \
+                                             (sum(np.diagonal(attr_confusion_matrix_proto_max_pred, offset=0)) + \
+                                             sum(np.diagonal(attr_confusion_matrix_proto_max_pred, offset=1)) + \
+                                             sum(np.diagonal(attr_confusion_matrix_proto_max_pred, offset=-1)))
 
             elif args.dataset == "Chexbert":
                 target_auc_gt.extend(y_mal.cpu().detach().numpy().tolist())
