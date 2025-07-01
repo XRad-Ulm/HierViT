@@ -90,7 +90,7 @@ b) Add the following content, replacing the path with your own dataset location:
        --lam_recon=0
        --lr=0.00001
 
-5. Test trained HierViT on derm7pt dataset
+5. Example: Test trained HierViT on derm7pt dataset
 
        --test=True
        --dataset="derm7pt"
