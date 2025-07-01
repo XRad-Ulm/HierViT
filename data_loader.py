@@ -259,14 +259,14 @@ def generateDatasetforSplit(splitnumber, threeD, resize_shape):
     img_test, mask_test, label_test, img_total_test = np.asarray(img_list_test), np.asarray(mask_list_test), np.asarray(
         label_list_test), np.asarray(img_list_total_test)
     if not threeD:
-        np.save("img_train_split" + str(splitnumber), img_train)
-        np.save("mask_train_split" + str(splitnumber), mask_train)
-        np.save("label_train_split" + str(splitnumber), label_train)
-        np.save("img_total_train_split" + str(splitnumber), img_total_train)
-        np.save("img_test_split" + str(splitnumber), img_test)
-        np.save("mask_test_split" + str(splitnumber), mask_test)
-        np.save("label_test_split" + str(splitnumber), label_test)
-        np.save("img_total_test_split" + str(splitnumber), img_total_test)
+        np.save("LIDC_img_train_split" + str(splitnumber), img_train)
+        np.save("LIDC_mask_train_split" + str(splitnumber), mask_train)
+        np.save("LIDC_label_train_split" + str(splitnumber), label_train)
+        np.save("LIDC_img_total_train_split" + str(splitnumber), img_total_train)
+        np.save("LIDC_img_test_split" + str(splitnumber), img_test)
+        np.save("LIDC_mask_test_split" + str(splitnumber), mask_test)
+        np.save("LIDC_label_test_split" + str(splitnumber), label_test)
+        np.save("LIDC_img_total_test_split" + str(splitnumber), img_total_test)
     else:
         if len(img_list_train) > 0:
             img_train, mask_train, label_train = np.asarray(img_list_train), np.asarray(
@@ -503,29 +503,16 @@ def load_lidc(batch_size,
     fin_train_dataset = []
     counter = 0
     for i in range(train_imgs.shape[0]):
-        if args.attr_class:
-            attr_label = np.asarray([round(train_labels[i, 9] - 1),
-                                     round(train_labels[i, 11] - 1),
-                                     round(train_labels[i, 13] - 1),
-                                     round(train_labels[i, 15] - 1),
-                                     round(train_labels[i, 17] - 1),
-                                     round(train_labels[i, 19] - 1),
-                                     round(train_labels[i, 21] - 1),
-                                     round(train_labels[i, 23] - 1)])
-        else:
-            attr_label = np.asarray([(train_labels[i, 9] - 1) / 4.0,
-                                     (train_labels[i, 11] - 1) / 3.0,
-                                     (train_labels[i, 13] - 1) / 5.0,
-                                     (train_labels[i, 15] - 1) / 4.0,
-                                     (train_labels[i, 17] - 1) / 4.0,
-                                     (train_labels[i, 19] - 1) / 4.0,
-                                     (train_labels[i, 21] - 1) / 4.0,
-                                     (train_labels[i, 23] - 1) / 4.0])
-        if args.ordinal_target:
-            mal_label = createOrdinalLabel(5, round(train_labels[i, 25]) - 1)
-        else:
-            mal_label = np.asarray(
-                distribution_label(x=[1., 2., 3., 4., 5.], mu=train_labels[i, 25], sig=train_labels[i, 26]))
+        attr_label = np.asarray([(train_labels[i, 9] - 1) / 4.0,
+                                 (train_labels[i, 11] - 1) / 3.0,
+                                 (train_labels[i, 13] - 1) / 5.0,
+                                 (train_labels[i, 15] - 1) / 4.0,
+                                 (train_labels[i, 17] - 1) / 4.0,
+                                 (train_labels[i, 19] - 1) / 4.0,
+                                 (train_labels[i, 21] - 1) / 4.0,
+                                 (train_labels[i, 23] - 1) / 4.0])
+        mal_label = np.asarray(
+            distribution_label(x=[1., 2., 3., 4., 5.], mu=train_labels[i, 25], sig=train_labels[i, 26]))
         fin_train_dataset.append(
             [np.expand_dims(train_imgs[i], axis=0), np.expand_dims(train_masks[i], axis=0), attr_label, mal_label,
              counter, train_imgs_total[i]])
@@ -535,28 +522,15 @@ def load_lidc(batch_size,
     fin_val_dataset = []
     counter = 0
     for i in range(val_imgs.shape[0]):
-        if args.attr_class:
-            attr_label = np.asarray([round(val_labels[i, 9] - 1),
-                                     round(val_labels[i, 11] - 1),
-                                     round(val_labels[i, 13] - 1),
-                                     round(val_labels[i, 15] - 1),
-                                     round(val_labels[i, 17] - 1),
-                                     round(val_labels[i, 19] - 1),
-                                     round(val_labels[i, 21] - 1),
-                                     round(val_labels[i, 23] - 1)])
-        else:
-            attr_label = np.asarray([(val_labels[i, 9] - 1) / 4.0,
-                                     (val_labels[i, 11] - 1) / 3.0,
-                                     (val_labels[i, 13] - 1) / 5.0,
-                                     (val_labels[i, 15] - 1) / 4.0,
-                                     (val_labels[i, 17] - 1) / 4.0,
-                                     (val_labels[i, 19] - 1) / 4.0,
-                                     (val_labels[i, 21] - 1) / 4.0,
-                                     (val_labels[i, 23] - 1) / 4.0])
-        if args.ordinal_target:
-            mal_label = createOrdinalLabel(5, round(val_labels[i, 25]) - 1)
-        else:
-            mal_label = np.asarray(distribution_label(x=[1., 2., 3., 4., 5.], mu=val_labels[i, 25], sig=val_labels[i, 26]))
+        attr_label = np.asarray([(val_labels[i, 9] - 1) / 4.0,
+                                 (val_labels[i, 11] - 1) / 3.0,
+                                 (val_labels[i, 13] - 1) / 5.0,
+                                 (val_labels[i, 15] - 1) / 4.0,
+                                 (val_labels[i, 17] - 1) / 4.0,
+                                 (val_labels[i, 19] - 1) / 4.0,
+                                 (val_labels[i, 21] - 1) / 4.0,
+                                 (val_labels[i, 23] - 1) / 4.0])
+        mal_label = np.asarray(distribution_label(x=[1., 2., 3., 4., 5.], mu=val_labels[i, 25], sig=val_labels[i, 26]))
         fin_val_dataset.append(
             [np.expand_dims(val_imgs[i], axis=0), np.expand_dims(val_masks[i], axis=0), attr_label, mal_label, counter, val_imgs_total[i]])
         counter += 1
@@ -565,29 +539,16 @@ def load_lidc(batch_size,
     fin_test_dataset = []
     counter = 0
     for i in range(test_imgs.shape[0]):
-        if args.attr_class:
-            attr_label = np.asarray([round(test_labels[i, 9] - 1),
-                                     round(test_labels[i, 11] - 1),
-                                     round(test_labels[i, 13] - 1),
-                                     round(test_labels[i, 15] - 1),
-                                     round(test_labels[i, 17] - 1),
-                                     round(test_labels[i, 19] - 1),
-                                     round(test_labels[i, 21] - 1),
-                                     round(test_labels[i, 23] - 1)])
-        else:
-            attr_label = np.asarray([(test_labels[i, 9] - 1) / 4.0,
-                                     (test_labels[i, 11] - 1) / 3.0,
-                                     (test_labels[i, 13] - 1) / 5.0,
-                                     (test_labels[i, 15] - 1) / 4.0,
-                                     (test_labels[i, 17] - 1) / 4.0,
-                                     (test_labels[i, 19] - 1) / 4.0,
-                                     (test_labels[i, 21] - 1) / 4.0,
-                                     (test_labels[i, 23] - 1) / 4.0])
-        if args.ordinal_target:
-            mal_label = createOrdinalLabel(5, round(test_labels[i, 25]) - 1)
-        else:
-            mal_label = np.asarray(
-                distribution_label(x=[1., 2., 3., 4., 5.], mu=test_labels[i, 25], sig=test_labels[i, 26]))
+        attr_label = np.asarray([(test_labels[i, 9] - 1) / 4.0,
+                                 (test_labels[i, 11] - 1) / 3.0,
+                                 (test_labels[i, 13] - 1) / 5.0,
+                                 (test_labels[i, 15] - 1) / 4.0,
+                                 (test_labels[i, 17] - 1) / 4.0,
+                                 (test_labels[i, 19] - 1) / 4.0,
+                                 (test_labels[i, 21] - 1) / 4.0,
+                                 (test_labels[i, 23] - 1) / 4.0])
+        mal_label = np.asarray(
+            distribution_label(x=[1., 2., 3., 4., 5.], mu=test_labels[i, 25], sig=test_labels[i, 26]))
         fin_test_dataset.append(
             [np.expand_dims(test_imgs[i], axis=0), np.expand_dims(test_masks[i], axis=0), attr_label, mal_label,
              counter, test_imgs_total[i]])
