@@ -231,12 +231,8 @@ def pushprotos(model_push, data_loader, idx_with_attri, args):
             print("Push: "+str(i) + " / " + str(len(data_loader)))
             if args.dataset == "LIDC":
                 (x, y_mask, y_attributes, y_mal, sampleID, img_total) = data
-                if args.attr_class:
-                    x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
-                        y_attributes.to("cuda", dtype=torch.int64), y_mal.to("cuda", dtype=torch.float)
-                else:
-                    x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
-                        y_attributes.to("cuda", dtype=torch.float), y_mal.to("cuda", dtype=torch.float)
+                x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
+                    y_attributes.to("cuda", dtype=torch.float), y_mal.to("cuda", dtype=torch.float)
             elif args.dataset == "derm7pt":
                 (x, y_mask, y_attributes, y_mal, sampleID) = data
                 x, y_mask, y_attributes, y_mal = x.to("cuda", dtype=torch.float), y_mask.to("cuda", dtype=torch.float), \
@@ -279,10 +275,7 @@ def pushprotos(model_push, data_loader, idx_with_attri, args):
 
             if args.dataset == "LIDC":
                 attr_classes = [5, 4, 6, 5, 5, 5, 5, 5]
-                if args.ordinal_target:
-                    max_y_mal = torch.sum(y_mal, dim=-1)
-                else:
-                    _, max_y_mal = torch.max(y_mal, dim=-1)
+                _, max_y_mal = torch.max(y_mal, dim=-1)
             elif args.dataset == "Chexbert":
                 max_y_mal = y_mal
                 attr_classes = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
@@ -295,14 +288,8 @@ def pushprotos(model_push, data_loader, idx_with_attri, args):
                     for capsule_idx in range(len(attr_classes)):
                         attrcorrectlypredicted=False
                         if args.dataset == "LIDC":
-                            if args.attr_class:
-                                start = sum([0, *attr_classes][:(capsule_idx + 1)])
-                                end = sum([0, *attr_classes][:(capsule_idx + 2)])
-                                if y_attributes[sai,capsule_idx]==torch.argmax(pred_attr[sai,start:end]):
-                                    attrcorrectlypredicted=True
-                            else:
-                                if torch.abs(y_attributes[sai, capsule_idx] - pred_attr[sai, capsule_idx]) < 0.25:
-                                    attrcorrectlypredicted=True
+                            if torch.abs(y_attributes[sai, capsule_idx] - pred_attr[sai, capsule_idx]) < 0.25:
+                                attrcorrectlypredicted=True
                         elif args.dataset == "Chexbert":
                             if torch.round(y_attributes[sai, capsule_idx]) == torch.round(pred_attr[sai, capsule_idx]):
                                 attrcorrectlypredicted = True
@@ -330,20 +317,12 @@ def pushprotos(model_push, data_loader, idx_with_attri, args):
                                 if args.dataset == "LIDC":
                                     if capsule_idx in [0, 3, 4, 5, 6, 7]:
                                         correctprotoattr=False
-                                        if args.attr_class:
-                                            if ((y_attributes[sai, capsule_idx] == 0 and protoidx == 0) or
-                                                    ((y_attributes[sai, capsule_idx] == 1) and protoidx == 1) or
-                                                    ((y_attributes[sai, capsule_idx] == 2) and protoidx == 2) or
-                                                    ((y_attributes[sai, capsule_idx] == 3) and protoidx == 3) or
-                                                    ((y_attributes[sai, capsule_idx] == 4) and protoidx == 4)):
-                                                correctprotoattr = True
-                                        else:
-                                            if (((y_attributes[sai, capsule_idx] < 0.125) and protoidx == 0) or
-                                                    ((0.125 <= y_attributes[sai, capsule_idx] < 0.375) and protoidx == 1) or
-                                                    ((0.375 <= y_attributes[sai, capsule_idx] < 0.625) and protoidx == 2) or
-                                                    ((0.625 <= y_attributes[sai, capsule_idx] < 0.875) and protoidx == 3) or
-                                                    ((y_attributes[sai, capsule_idx] >= 0.875) and protoidx == 4)):
-                                                correctprotoattr = True
+                                        if (((y_attributes[sai, capsule_idx] < 0.125) and protoidx == 0) or
+                                                ((0.125 <= y_attributes[sai, capsule_idx] < 0.375) and protoidx == 1) or
+                                                ((0.375 <= y_attributes[sai, capsule_idx] < 0.625) and protoidx == 2) or
+                                                ((0.625 <= y_attributes[sai, capsule_idx] < 0.875) and protoidx == 3) or
+                                                ((y_attributes[sai, capsule_idx] >= 0.875) and protoidx == 4)):
+                                            correctprotoattr = True
                                         if correctprotoattr:
                                             for protoidx2 in range(dists_to_protos[capsule_idx].shape[2]):
                                                 if dists_to_protos[capsule_idx][sai, protoidx, protoidx2] < \
@@ -367,18 +346,11 @@ def pushprotos(model_push, data_loader, idx_with_attri, args):
                                                         protoidx, protoidx2, :].cpu()
                                     elif capsule_idx == 1:
                                         correctprotoattr = False
-                                        if args.attr_class:
-                                            if ((y_attributes[sai, capsule_idx] == 0 and protoidx == 0) or
-                                                    ((y_attributes[sai, capsule_idx] == 1) and protoidx == 1) or
-                                                    ((y_attributes[sai, capsule_idx] == 2) and protoidx == 2) or
-                                                    ((y_attributes[sai, capsule_idx] == 3) and protoidx == 3)):
-                                                correctprotoattr = True
-                                        else:
-                                            if (((y_attributes[sai, capsule_idx] < 0.16) and protoidx == 0) or
-                                                    ((0.16 <= y_attributes[sai, capsule_idx] < 0.49) and protoidx == 1) or
-                                                    ((0.49 <= y_attributes[sai, capsule_idx] < 0.82) and protoidx == 2) or
-                                                    ((y_attributes[sai, capsule_idx] >= 0.82) and protoidx == 3)):
-                                                correctprotoattr = True
+                                        if (((y_attributes[sai, capsule_idx] < 0.16) and protoidx == 0) or
+                                                ((0.16 <= y_attributes[sai, capsule_idx] < 0.49) and protoidx == 1) or
+                                                ((0.49 <= y_attributes[sai, capsule_idx] < 0.82) and protoidx == 2) or
+                                                ((y_attributes[sai, capsule_idx] >= 0.82) and protoidx == 3)):
+                                            correctprotoattr = True
                                         if correctprotoattr:
                                             for protoidx2 in range(dists_to_protos[capsule_idx].shape[2]):
                                                 if dists_to_protos[capsule_idx][sai, protoidx, protoidx2] < \
@@ -403,22 +375,13 @@ def pushprotos(model_push, data_loader, idx_with_attri, args):
                                                         protoidx, protoidx2, :].cpu()
                                     elif capsule_idx == 2:
                                         correctprotoattr = False
-                                        if args.attr_class:
-                                            if ((y_attributes[sai, capsule_idx] == 0 and protoidx == 0) or
-                                                    ((y_attributes[sai, capsule_idx] == 1) and protoidx == 1) or
-                                                    ((y_attributes[sai, capsule_idx] == 2) and protoidx == 2) or
-                                                    ((y_attributes[sai, capsule_idx] == 3) and protoidx == 3) or
-                                                    ((y_attributes[sai, capsule_idx] == 4) and protoidx == 4) or
-                                                    ((y_attributes[sai, capsule_idx] == 5) and protoidx == 5)):
-                                                correctprotoattr = True
-                                        else:
-                                            if (((y_attributes[sai, capsule_idx] < 0.1) and protoidx == 0) or
-                                                    ((0.1 <= y_attributes[sai, capsule_idx] < 0.3) and protoidx == 1) or
-                                                    ((0.3 <= y_attributes[sai, capsule_idx] < 0.5) and protoidx == 2) or
-                                                    ((0.5 <= y_attributes[sai, capsule_idx] < 0.7) and protoidx == 3) or
-                                                    ((0.7 <= y_attributes[sai, capsule_idx] < 0.9) and protoidx == 4) or
-                                                    ((y_attributes[sai, capsule_idx] >= 0.9) and protoidx == 5)):
-                                                correctprotoattr = True
+                                        if (((y_attributes[sai, capsule_idx] < 0.1) and protoidx == 0) or
+                                                ((0.1 <= y_attributes[sai, capsule_idx] < 0.3) and protoidx == 1) or
+                                                ((0.3 <= y_attributes[sai, capsule_idx] < 0.5) and protoidx == 2) or
+                                                ((0.5 <= y_attributes[sai, capsule_idx] < 0.7) and protoidx == 3) or
+                                                ((0.7 <= y_attributes[sai, capsule_idx] < 0.9) and protoidx == 4) or
+                                                ((y_attributes[sai, capsule_idx] >= 0.9) and protoidx == 5)):
+                                            correctprotoattr = True
                                         if correctprotoattr:
                                             for protoidx2 in range(dists_to_protos[capsule_idx].shape[2]):
                                                 if dists_to_protos[capsule_idx][sai, protoidx, protoidx2] < \
