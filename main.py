@@ -203,6 +203,8 @@ if __name__ == "__main__":
         wandb.watch(model)
         datestr = str(datetime.datetime.now())
         print("this run has datestr " + datestr)
+        if not os.path.exists('prototypes'):
+            os.makedirs(path)
         protosavedir = "./prototypes/" + str(datestr)
         os.mkdir(protosavedir)
         overall_acc_best = 0.0
