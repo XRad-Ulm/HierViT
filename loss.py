@@ -23,15 +23,12 @@ def model_loss(y, y_pred, x, x_recon, lam_recon, attr_gt, attr_pred, lam_attr, e
         L_recon = 0
 
     if args.dataset == "LIDC":
-        if args.ordinal_target:
-            L_pred = nn.CrossEntropyLoss()(y_pred, y)
-        else:
-            if args.base_model == "ViT":
-                y = torch.argmax(y, axis=1).to(torch.float32)
-                y /= 4.0
-                L_pred = nn.MSELoss()(torch.squeeze(y_pred), y)
-            else:
-                L_pred = nn.KLDivLoss(reduction="batchmean")(y_pred, y)
+          if args.base_model == "ViT":
+              y = torch.argmax(y, axis=1).to(torch.float32)
+              y /= 4.0
+              L_pred = nn.MSELoss()(torch.squeeze(y_pred), y)
+          else:
+              L_pred = nn.KLDivLoss(reduction="batchmean")(y_pred, y)
     elif args.dataset == "derm7pt":
         weights = [1.0/0.568743818,1.0/0.044510386,1.0/0.095944609,1.0/0.041543027,1.0/0.24925816]
         class_weights = torch.FloatTensor(weights).cuda()
@@ -59,12 +56,7 @@ def model_loss(y, y_pred, x, x_recon, lam_recon, attr_gt, attr_pred, lam_attr, e
     else:
         for i in range(attr_gt.shape[-1]):
             if args.dataset == "LIDC":
-                if args.attr_class:
-                    start = sum([0, *attr_classes][:(i + 1)])
-                    end = sum([0, *attr_classes][:(i + 2)])
-                    L_attr += nn.CrossEntropyLoss()(attr_pred[batchidx_with_attri, start:end],attr_gt[batchidx_with_attri, i])
-                else:
-                    L_attr += nn.MSELoss()(attr_pred[batchidx_with_attri, i], attr_gt[batchidx_with_attri, i])
+                L_attr += nn.MSELoss()(attr_pred[batchidx_with_attri, i], attr_gt[batchidx_with_attri, i])
             elif args.dataset == "Chexbert":
                 L_attr += nn.BCELoss()(attr_pred[batchidx_with_attri, i], attr_gt[batchidx_with_attri, i])
 
@@ -100,21 +92,14 @@ def model_loss(y, y_pred, x, x_recon, lam_recon, attr_gt, attr_pred, lam_attr, e
                     L_cluster_allcpsi += (L_cluster / len(batchidx_with_attri))
                 if args.dataset == "LIDC":
                     if capsule_idx in [0, 3, 4, 5, 6, 7]:
-                        if args.attr_class:
-                            idx0 = (attr_gt[batchidx_with_attri, capsule_idx] == 0).nonzero()
-                            idx1 = (attr_gt[batchidx_with_attri, capsule_idx] == 1).nonzero()
-                            idx2 = (attr_gt[batchidx_with_attri, capsule_idx] == 2).nonzero()
-                            idx3 = (attr_gt[batchidx_with_attri, capsule_idx] == 3).nonzero()
-                            idx4 = (attr_gt[batchidx_with_attri, capsule_idx] == 4).nonzero()
-                        else:
-                            idx0 = (attr_gt[batchidx_with_attri, capsule_idx] < 0.125).nonzero()
-                            idx1 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.125) & (
-                                    attr_gt[batchidx_with_attri, capsule_idx] < 0.375)).nonzero()
-                            idx2 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.375) & (
-                                    attr_gt[batchidx_with_attri, capsule_idx] < 0.625)).nonzero()
-                            idx3 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.625) & (
-                                    attr_gt[batchidx_with_attri, capsule_idx] < 0.875)).nonzero()
-                            idx4 = (attr_gt[batchidx_with_attri, capsule_idx] >= 0.875).nonzero()
+                        idx0 = (attr_gt[batchidx_with_attri, capsule_idx] < 0.125).nonzero()
+                        idx1 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.125) & (
+                                attr_gt[batchidx_with_attri, capsule_idx] < 0.375)).nonzero()
+                        idx2 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.375) & (
+                                attr_gt[batchidx_with_attri, capsule_idx] < 0.625)).nonzero()
+                        idx3 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.625) & (
+                                attr_gt[batchidx_with_attri, capsule_idx] < 0.875)).nonzero()
+                        idx4 = (attr_gt[batchidx_with_attri, capsule_idx] >= 0.875).nonzero()
                         idxs = [idx0, idx1, idx2, idx3, idx4]
                         L_cluster = 0
 
@@ -130,18 +115,12 @@ def model_loss(y, y_pred, x, x_recon, lam_recon, attr_gt, attr_pred, lam_attr, e
                         L_sep += L_sep_loss / (len(batchidx_with_attri) * 4)
 
                     elif capsule_idx == 1:
-                        if args.attr_class:
-                            idx0 = (attr_gt[batchidx_with_attri, capsule_idx] == 0).nonzero()
-                            idx1 = (attr_gt[batchidx_with_attri, capsule_idx] == 1).nonzero()
-                            idx2 = (attr_gt[batchidx_with_attri, capsule_idx] == 2).nonzero()
-                            idx3 = (attr_gt[batchidx_with_attri, capsule_idx] == 3).nonzero()
-                        else:
-                            idx0 = (attr_gt[batchidx_with_attri, capsule_idx] < 0.16).nonzero()
-                            idx1 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.16) & (
-                                    attr_gt[batchidx_with_attri, capsule_idx] < 0.49)).nonzero()
-                            idx2 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.49) & (
-                                    attr_gt[batchidx_with_attri, capsule_idx] < 0.82)).nonzero()
-                            idx3 = (attr_gt[batchidx_with_attri, capsule_idx] >= 0.82).nonzero()
+                        idx0 = (attr_gt[batchidx_with_attri, capsule_idx] < 0.16).nonzero()
+                        idx1 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.16) & (
+                                attr_gt[batchidx_with_attri, capsule_idx] < 0.49)).nonzero()
+                        idx2 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.49) & (
+                                attr_gt[batchidx_with_attri, capsule_idx] < 0.82)).nonzero()
+                        idx3 = (attr_gt[batchidx_with_attri, capsule_idx] >= 0.82).nonzero()
                         idxs = [idx0, idx1, idx2, idx3]
                         L_cluster = 0
 
@@ -159,24 +138,16 @@ def model_loss(y, y_pred, x, x_recon, lam_recon, attr_gt, attr_pred, lam_attr, e
                         L_sep += L_sep_loss / (len(batchidx_with_attri) * 3)
 
                     elif capsule_idx == 2:
-                        if args.attr_class:
-                            idx0 = (attr_gt[batchidx_with_attri, capsule_idx] == 0).nonzero()
-                            idx1 = (attr_gt[batchidx_with_attri, capsule_idx] == 1).nonzero()
-                            idx2 = (attr_gt[batchidx_with_attri, capsule_idx] == 2).nonzero()
-                            idx3 = (attr_gt[batchidx_with_attri, capsule_idx] == 3).nonzero()
-                            idx4 = (attr_gt[batchidx_with_attri, capsule_idx] == 4).nonzero()
-                            idx5 = (attr_gt[batchidx_with_attri, capsule_idx] == 5).nonzero()
-                        else:
-                            idx0 = (attr_gt[batchidx_with_attri, capsule_idx] < 0.1).nonzero()
-                            idx1 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.1) & (
-                                    attr_gt[batchidx_with_attri, capsule_idx] < 0.3)).nonzero()
-                            idx2 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.3) & (
-                                    attr_gt[batchidx_with_attri, capsule_idx] < 0.5)).nonzero()
-                            idx3 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.5) & (
-                                    attr_gt[batchidx_with_attri, capsule_idx] < 0.7)).nonzero()
-                            idx4 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.7) & (
-                                    attr_gt[batchidx_with_attri, capsule_idx] < 0.9)).nonzero()
-                            idx5 = (attr_gt[batchidx_with_attri, capsule_idx] >= 0.9).nonzero()
+                        idx0 = (attr_gt[batchidx_with_attri, capsule_idx] < 0.1).nonzero()
+                        idx1 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.1) & (
+                                attr_gt[batchidx_with_attri, capsule_idx] < 0.3)).nonzero()
+                        idx2 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.3) & (
+                                attr_gt[batchidx_with_attri, capsule_idx] < 0.5)).nonzero()
+                        idx3 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.5) & (
+                                attr_gt[batchidx_with_attri, capsule_idx] < 0.7)).nonzero()
+                        idx4 = ((attr_gt[batchidx_with_attri, capsule_idx] >= 0.7) & (
+                                attr_gt[batchidx_with_attri, capsule_idx] < 0.9)).nonzero()
+                        idx5 = (attr_gt[batchidx_with_attri, capsule_idx] >= 0.9).nonzero()
                         idxs = [idx0, idx1, idx2, idx3, idx4, idx5]
                         L_cluster = 0
 
