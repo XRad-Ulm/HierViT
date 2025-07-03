@@ -156,53 +156,38 @@ def train_model(trainmodel, data_loader, args, epoch, optim, idx_with_attri):
                                          sum(np.diagonal(mal_confusion_matrix, offset=-1))
             correct_mal += mal_correct_within_one
             wandb.log({'train_acc_step': mal_correct_within_one})
+            if args.dataset == "derm7pt":
+                batchidx_with_attri = []
+                for sai in range(len(sampleID)):
+                    if sampleID[sai] > -1:
+                        batchidx_with_attri.append(sai)
+                attrisamples += len(batchidx_with_attri)
+                for i in range(7):
+                    correct_att[i] += torch.sum(y_attributes[batchidx_with_attri,i] == torch.argmax(pred_attr[i][batchidx_with_attri],dim=-1)).cpu().detach().numpy()
 
-            if args.attr_class:
-                attr_classes = [5, 4, 6, 5, 5, 5, 5, 5]
-                for attri in range(y_attributes.shape[-1]):
-                    a_labels = list(range(attr_classes[attri]))
-                    start = sum([0, *attr_classes][:(attri + 1)])
-                    end = sum([0, *attr_classes][:(attri + 2)])
+            elif args.dataset == "LIDC":
+                y_attributes[:, [0, 3, 4, 5, 6, 7]] *= 4
+                y_attributes[:, 1] *= 3
+                y_attributes[:, 2] *= 5
+                y_attributes += 1
+                pred_attr[:, [0, 3, 4, 5, 6, 7]] *= 4
+                pred_attr[:, 1] *= 3
+                pred_attr[:, 2] *= 5
+                pred_attr += 1
+                for at in range(y_attributes.shape[1]):
+                    a_labels = [1, 2, 3, 4, 5]
+                    if num_attributes == 8:
+                        if at == 1:
+                            a_labels = [1, 2, 3, 4]
+                        if at == 2:
+                            a_labels = [1, 2, 3, 4, 5, 6]
                     attr_confusion_matrix = confusion_matrix(
-                        y_attributes[:, attri].cpu().detach().numpy(),
-                        np.argmax(pred_attr[:, start:end].cpu().detach().numpy(), axis=-1),
+                        np.rint(y_attributes[:, at].cpu().detach().numpy()),
+                        np.rint(pred_attr[:, at].cpu().detach().numpy()),
                         labels=a_labels)
-                    correct_att[attri] += sum(np.diagonal(attr_confusion_matrix, offset=0)) + \
-                                          sum(np.diagonal(attr_confusion_matrix, offset=1)) + \
-                                          sum(np.diagonal(attr_confusion_matrix, offset=-1))
-            else:
-                if args.dataset == "derm7pt":
-                    batchidx_with_attri = []
-                    for sai in range(len(sampleID)):
-                        if sampleID[sai] > -1:
-                            batchidx_with_attri.append(sai)
-                    attrisamples += len(batchidx_with_attri)
-                    for i in range(7):
-                        correct_att[i] += torch.sum(y_attributes[batchidx_with_attri,i] == torch.argmax(pred_attr[i][batchidx_with_attri],dim=-1)).cpu().detach().numpy()
-
-                elif args.dataset == "LIDC":
-                    y_attributes[:, [0, 3, 4, 5, 6, 7]] *= 4
-                    y_attributes[:, 1] *= 3
-                    y_attributes[:, 2] *= 5
-                    y_attributes += 1
-                    pred_attr[:, [0, 3, 4, 5, 6, 7]] *= 4
-                    pred_attr[:, 1] *= 3
-                    pred_attr[:, 2] *= 5
-                    pred_attr += 1
-                    for at in range(y_attributes.shape[1]):
-                        a_labels = [1, 2, 3, 4, 5]
-                        if num_attributes == 8:
-                            if at == 1:
-                                a_labels = [1, 2, 3, 4]
-                            if at == 2:
-                                a_labels = [1, 2, 3, 4, 5, 6]
-                        attr_confusion_matrix = confusion_matrix(
-                            np.rint(y_attributes[:, at].cpu().detach().numpy()),
-                            np.rint(pred_attr[:, at].cpu().detach().numpy()),
-                            labels=a_labels)
-                        correct_att[at] += sum(np.diagonal(attr_confusion_matrix, offset=0)) + \
-                                           sum(np.diagonal(attr_confusion_matrix, offset=1)) + \
-                                           sum(np.diagonal(attr_confusion_matrix, offset=-1))
+                    correct_att[at] += sum(np.diagonal(attr_confusion_matrix, offset=0)) + \
+                                       sum(np.diagonal(attr_confusion_matrix, offset=1)) + \
+                                       sum(np.diagonal(attr_confusion_matrix, offset=-1))
         elif args.dataset == "Chexbert":
             pred_confusion_matrix = confusion_matrix(
                 y_mal.cpu().detach().numpy(),
