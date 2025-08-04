@@ -92,6 +92,7 @@ if __name__ == "__main__":
         if not args.base_model == "ViT":
             model.args.train = False
             model.args.test = True
+
         print("run test split")
         _, test_acc, te_attr_acc = test(testmodel=model, data_loader=test_loader, args=args)
         print('test acc = ')
@@ -117,6 +118,11 @@ if __name__ == "__main__":
             print("PE_test_acc (with use of prototypes) target_auc, target_accuracy, target_precision, target_recall, target_f1: ")
             print(test_acc)
             print("PE_test_attr_acc: " + str(test_attracc))
+
+        print("start test time intervention")
+        from test_time_intervention import test_time_intervention
+        test_time_intervention(testmodel=model, val_data_loader=val_loader, test_data_loader=test_loader,
+                               epoch=args.epoch, prototypefoldername=path.split("_")[0], args=args)
 
         if args.dataset in ["LIDC", "derm7pt"]:
             test_show_inference(testmodel=model, data_loader=test_loader, epoch=args.epoch,
