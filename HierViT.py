@@ -170,6 +170,45 @@ class CustomVisionTransformer(nn.Module): # modified from https://github.com/pyt
             self.protodigis_list = [self.protodigis0, self.protodigis1, self.protodigis2, self.protodigis3,
                                 self.protodigis4, self.protodigis5, self.protodigis6, self.protodigis7]
 
+    def attribute_lv(self, input):
+        if self.numcaps in [5, 6, 7]:
+            processed_ = self.vit._process_input(input)
+        else:
+            processed_ = self.vit._process_input(input.repeat(1, 3, 1, 1))
+        batch_size = processed_.shape[0]
+        # Expand the class token to the full batch
+        batch_class_token = self.vit.class_token.expand(batch_size, -1, -1)
+        all_tokens = torch.cat([batch_class_token, processed_], dim=1)
+        features = self.vit.encoder(all_tokens)
+
+        if self.numcaps == 7:
+            features_attri0 = self.encoder_attri0(features)
+            features_attri1 = self.encoder_attri1(features)
+            features_attri2 = self.encoder_attri2(features)
+            features_attri3 = self.encoder_attri3(features)
+            features_attri4 = self.encoder_attri4(features)
+            features_attri5 = self.encoder_attri5(features)
+            features_attri6 = self.encoder_attri6(features)
+        if self.numcaps == 8:
+            features_attri0 = self.encoder_attri0(features)
+            features_attri1 = self.encoder_attri1(features)
+            features_attri2 = self.encoder_attri2(features)
+            features_attri3 = self.encoder_attri3(features)
+            features_attri4 = self.encoder_attri4(features)
+            features_attri5 = self.encoder_attri5(features)
+            features_attri6 = self.encoder_attri6(features)
+            features_attri7 = self.encoder_attri7(features)
+
+        if self.numcaps == 7:
+            stacked_attrifeatures = torch.stack([features_attri0, features_attri1, features_attri2, features_attri3,
+                                                 features_attri4, features_attri5, features_attri6], dim=1)
+        elif self.numcaps == 8:
+            stacked_attrifeatures = torch.stack([features_attri0, features_attri1, features_attri2, features_attri3,
+                                                 features_attri4, features_attri5, features_attri6, features_attri7],
+                                                dim=1)
+        return stacked_attrifeatures
+
+
     def forward(self, input):
         if self.numcaps in [5,6,7]:
             processed_ = self.vit._process_input(input)
